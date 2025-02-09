@@ -1,5 +1,7 @@
-package guru.springframework.learnspringauthorization.model;
+package guru.springframework.learnspringauthorization.repository;
 
+import guru.springframework.learnspringauthorization.model.MovieRates;
+import guru.springframework.learnspringauthorization.model.MyUser;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;

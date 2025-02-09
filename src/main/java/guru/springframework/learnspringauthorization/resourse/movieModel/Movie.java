@@ -1,4 +1,4 @@
-package guru.springframework.learnspringauthorization.resourse.model;
+package guru.springframework.learnspringauthorization.resourse.movieModel;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;

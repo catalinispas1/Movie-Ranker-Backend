@@ -2,7 +2,7 @@ package guru.springframework.learnspringauthorization;
 
 import guru.springframework.learnspringauthorization.model.MyUser;
 import guru.springframework.learnspringauthorization.model.MyUserDetailService;
-import guru.springframework.learnspringauthorization.model.MyUserRepository;
+import guru.springframework.learnspringauthorization.repository.MyUserRepository;
 import guru.springframework.learnspringauthorization.model.UserDetailsResponse;
 import guru.springframework.learnspringauthorization.webtoken.JwtService;
 import guru.springframework.learnspringauthorization.webtoken.LoginForm;

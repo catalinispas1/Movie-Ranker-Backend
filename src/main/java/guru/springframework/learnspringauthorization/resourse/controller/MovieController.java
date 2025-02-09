@@ -1,24 +1,21 @@
 package guru.springframework.learnspringauthorization.resourse.controller;
 
 import guru.springframework.learnspringauthorization.model.*;
-import guru.springframework.learnspringauthorization.resourse.model.CurrentMovie;
-import guru.springframework.learnspringauthorization.resourse.model.MovieResponse;
+import guru.springframework.learnspringauthorization.repository.FavoriteMoviesRepository;
+import guru.springframework.learnspringauthorization.repository.MovieCommentsRepository;
+import guru.springframework.learnspringauthorization.repository.MovieRatesRepository;
+import guru.springframework.learnspringauthorization.repository.MyUserRepository;
+import guru.springframework.learnspringauthorization.resourse.movieModel.CurrentMovie;
+import guru.springframework.learnspringauthorization.resourse.movieModel.MovieResponse;
 import guru.springframework.learnspringauthorization.resourse.service.MovieClientImpl;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
-import org.springframework.data.web.PagedModel;
-import org.springframework.data.web.PagedResourcesAssembler;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.util.Optional;
 
 // ./gradlew bootRun
 @RestController
@@ -76,102 +73,48 @@ public class MovieController {
     }
 
     @PostMapping("/add/fav/movie")
-    public void addFavoriteMovie(@RequestParam(name = "id") Long movieId, @RequestParam String posterPath, @RequestParam String title) {
-        MyUser user = getCurrentUser();
-
-        Optional<FavoriteMovies> existingMovie  = favoriteMoviesRepository.findByMovieId(movieId);
-        FavoriteMovies favoriteMovies;
-
-        if (existingMovie.isPresent()) {
-            favoriteMovies = existingMovie.get();
-        } else {
-            favoriteMovies = new FavoriteMovies();
-            favoriteMovies.setMovieId(movieId);
-            favoriteMovies.getUsers().add(user);
-            favoriteMovies.setBackdropPath(posterPath);
-            favoriteMovies.setTitle(title);
-            favoriteMoviesRepository.save(favoriteMovies);
-        }
-
-        user.getFavoriteMovies().add(favoriteMovies);
-        favoriteMovies.getUsers().add(user);
-        userRepository.save(user);
+    public void addFavoriteMovie(@RequestParam Long id, @RequestParam String posterPath, @RequestParam String title) {
+        movieClient.addFavoriteMovie(getCurrentUser(), id, posterPath, title);
     }
 
     @PostMapping("/remove/fav/movie")
-    public void removeFavoriteMovie(@RequestParam(name = "id") Long movieId) {
-        MyUser user = getCurrentUser();
-
-        user.getFavoriteMovies().removeIf(movie -> movie.getMovieId().equals(movieId));
-        userRepository.save(user);
+    public void removeFavoriteMovie(@RequestParam Long id) {
+        movieClient.removeFavoriteMovie(getCurrentUser(), id);
     }
 
     @GetMapping("/is/movie/fav")
-    public boolean isThisMovieFav(@RequestParam(name = "id") Long movieId) {
-        MyUser user = getCurrentUser();
-        return user.getFavoriteMovies().stream()
-                .anyMatch(movie -> movie.getMovieId().equals(movieId) && movie.getUsers().contains(user));
+    public boolean isThisMovieFav(@RequestParam Long id) {
+        return movieClient.isMovieFavorite(getCurrentUser(), id);
     }
 
-    @PostMapping("rate/movie")
-    public void rateMovie(@RequestParam(name = "id") Long movieId, @RequestParam int rating) {
-        MyUser user = getCurrentUser();
-
-        Optional<MovieRates> getUserRating = movieRatesRepository.findByUserReviewerAndMovieId(user, movieId);
-        if (getUserRating.isPresent()) {
-            MovieRates updateRate = getUserRating.get();
-            updateRate.setRating(rating);
-            movieRatesRepository.save(updateRate);
-        } else {
-            MovieRates movieRates = new MovieRates();
-            movieRates.setRating(rating);
-            movieRates.setUserReviewer(user);
-            movieRates.setMovieId(movieId);
-            movieRatesRepository.save(movieRates);
-        }
+    @PostMapping("/rate/movie")
+    public void rateMovie(@RequestParam Long id, @RequestParam int rating) {
+        movieClient.rateMovie(getCurrentUser(), id, rating);
     }
 
-    @GetMapping("get/movie/rating")
-    public int getMovieRating(@RequestParam(name = "id") long movieId) {
-        MyUser user = getCurrentUser();
-
-        Optional<MovieRates> currentRating = movieRatesRepository.findByUserReviewerAndMovieId(user, movieId);
-        return currentRating.map(MovieRates::getRating).orElse(0);
+    @GetMapping("/get/movie/rating")
+    public int getMovieRating(@RequestParam Long id) {
+        return movieClient.getMovieRating(getCurrentUser(), id);
     }
 
-    @GetMapping("user/fav/movies")
-    public Page<FavoriteMovies> getFavoriteMovies(@RequestParam(required = false, defaultValue = "0") int page) {
-        MyUser user = getCurrentUser();
-
-        Pageable pageable = PageRequest.of(page, 20);
-        return favoriteMoviesRepository.findByUsers(user, pageable);
+    @GetMapping("/user/fav/movies")
+    public Page<FavoriteMovies> getFavoriteMovies(@RequestParam(defaultValue = "0") int page) {
+        return movieClient.getFavoriteMovies(getCurrentUser(), page);
     }
 
-    @PostMapping("post/movie/comment")
-    public void postMovieComment(@RequestParam(name = "id") Long movieId, @RequestParam String comment) {
-        MyUser user = getCurrentUser();
-        MovieComments movieComments = new MovieComments();
-
-        movieComments.setComment(comment);
-        movieComments.setCommentedMovieId(movieId);
-        movieComments.setUserCommentator(user);
-        movieComments.setCommentatorName(user.getUsername());
-        movieCommentsRepository.save(movieComments);
+    @PostMapping("/post/movie/comment")
+    public void postMovieComment(@RequestParam Long id, @RequestParam String comment) {
+        movieClient.postMovieComment(getCurrentUser(), id, comment);
     }
 
-    @GetMapping("get/movie/comments")
-    public Page<MovieComments> getMovieComments(@RequestParam(name = "id") Long id, @RequestParam(required = false, defaultValue = "0") int page) {
-        Pageable pageable = PageRequest.of(page, 10, Sort.by(Sort.Direction.DESC, "timePosted"));
-        return movieCommentsRepository.findByCommentedMovieId(id, pageable);
+    @GetMapping("/get/movie/comments")
+    public Page<MovieComments> getMovieComments(@RequestParam Long id, @RequestParam(defaultValue = "0") int page) {
+        return movieClient.getMovieComments(id, page);
     }
 
-    @GetMapping("get/avg/rating")
-    public Double getAverageRating(@RequestParam(name = "id") Long movieId) {
-        Double avgRating = movieRatesRepository.findAverageRatingByMovieId(movieId);
-        if (avgRating == null) {
-            return 0.0;
-        }
-        return avgRating;
+    @GetMapping("/get/avg/rating")
+    public Double getAverageRating(@RequestParam Long id) {
+        return movieClient.getAverageRating(id);
     }
 
     private MyUser getCurrentUser() {
@@ -179,7 +122,6 @@ public class MovieController {
         if (authentication == null || !authentication.isAuthenticated()) {
             throw new RuntimeException("User not found");
         }
-        String username = authentication.getName();
-        return userRepository.findByUsername(username).orElseThrow(() -> new RuntimeException("User not found"));
+        return movieClient.getCurrentUser(authentication.getName());
     }
 }
