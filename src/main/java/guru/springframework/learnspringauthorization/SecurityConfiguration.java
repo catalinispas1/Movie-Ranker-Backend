@@ -6,6 +6,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.env.Environment;
 import org.springframework.data.web.config.EnableSpringDataWebSupport;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
@@ -89,10 +90,15 @@ public class SecurityConfiguration {
         return new BCryptPasswordEncoder();
     }
 
+
+    private final String serverIp;
+    @Autowired
+    public SecurityConfiguration(Environment environment) {serverIp = environment.getProperty("server.ip");};
+
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.addAllowedOrigin("http://192.168.100.31:4200");
+        configuration.addAllowedOrigin("http://" + serverIp + ":4200");
         configuration.addAllowedOrigin("http://localhost:4200"); // Permite originea aplicatiei Angular
         configuration.addAllowedMethod("*"); // Permite toate metodele HTTP (GET, POST, etc.)
         configuration.addAllowedHeader("*"); // Permite toate header-ele
