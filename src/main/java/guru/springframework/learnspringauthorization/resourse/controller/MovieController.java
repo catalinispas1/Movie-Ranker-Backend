@@ -1,35 +1,24 @@
 package guru.springframework.learnspringauthorization.resourse.controller;
 
 import guru.springframework.learnspringauthorization.model.*;
-import guru.springframework.learnspringauthorization.repository.FavoriteMoviesRepository;
-import guru.springframework.learnspringauthorization.repository.MovieCommentsRepository;
-import guru.springframework.learnspringauthorization.repository.MovieRatesRepository;
-import guru.springframework.learnspringauthorization.repository.MyUserRepository;
 import guru.springframework.learnspringauthorization.resourse.movieModel.CurrentMovie;
+import guru.springframework.learnspringauthorization.resourse.movieModel.FavoriteGenreCount;
+import guru.springframework.learnspringauthorization.resourse.movieModel.Genre;
 import guru.springframework.learnspringauthorization.resourse.movieModel.MovieResponse;
 import guru.springframework.learnspringauthorization.resourse.service.MovieClientImpl;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 // ./gradlew bootRun
 @RestController
 public class MovieController {
     @Autowired
     private MovieClientImpl movieClient;
-    @Autowired
-    private MyUserRepository userRepository;
-    @Autowired
-    private MovieRatesRepository movieRatesRepository;
-    @Autowired
-    private FavoriteMoviesRepository favoriteMoviesRepository;
-    @Autowired
-    private MovieCommentsRepository movieCommentsRepository;
 
     @GetMapping("/popular")
     public MovieResponse getPopularMovies(@RequestParam(defaultValue = "1") int page) {
@@ -73,13 +62,13 @@ public class MovieController {
     }
 
     @PostMapping("/add/fav/movie")
-    public void addFavoriteMovie(@RequestParam Long id, @RequestParam String posterPath, @RequestParam String title) {
-        movieClient.addFavoriteMovie(getCurrentUser(), id, posterPath, title);
+    public void addFavoriteMovie(@RequestParam Long id, @RequestParam String posterPath, @RequestParam String title, @RequestBody List<Genre> genres) {
+        movieClient.addFavoriteMovie(getCurrentUser(), id, posterPath, title, genres);
     }
 
     @PostMapping("/remove/fav/movie")
-    public void removeFavoriteMovie(@RequestParam Long id) {
-        movieClient.removeFavoriteMovie(getCurrentUser(), id);
+    public void removeFavoriteMovie(@RequestParam Long id, @RequestBody List<Genre> genres) {
+        movieClient.removeFavoriteMovie(getCurrentUser(), id, genres);
     }
 
     @GetMapping("/is/movie/fav")
@@ -115,6 +104,26 @@ public class MovieController {
     @GetMapping("/get/avg/rating")
     public Double getAverageRating(@RequestParam Long id) {
         return movieClient.getAverageRating(id);
+    }
+
+    @GetMapping("/get/fav/count")
+    public int getUserFavoriteMoviesCount() {
+        return movieClient.getUserFavoriteMoviesCount(getCurrentUser());
+    }
+
+    @GetMapping("/get/average/user-movie-rates")
+    public Double getUserRatingPattern() {
+        return movieClient.getAverageRatingPattern(getCurrentUser());
+    }
+
+    @GetMapping("/get/user-comments-count")
+    public int getUserTotalComments() {
+        return movieClient.getTotalCommentsPosted(getCurrentUser());
+    }
+
+    @GetMapping("/get/user-genre-fav-count")
+    public List<FavoriteGenreCount> getUserGenreFavoriteCount() {
+        return movieClient.getFavoriteGenreCount(getCurrentUser());
     }
 
     private MyUser getCurrentUser() {

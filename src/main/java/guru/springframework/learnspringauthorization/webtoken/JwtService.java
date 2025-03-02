@@ -12,21 +12,20 @@ import java.util.Base64;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
 
 @Service
 public class JwtService {
-    private static final String SECRET = "DB799421E9F7C2D8E8F590EC4EB5CF009FB5147B9DABA7266714907B00D8651A3A76D714E32EE20A74D562DCE256B4190B20CD0F62998A29F1FEB8E3C23EBE12";
-    private static final long VALIDITY = TimeUnit.MINUTES.toMillis(30);
 
-    public String generateToken(UserDetails userDetails) {
+    private static final String SECRET = "DB799421E9F7C2D8E8F590EC4EB5CF009FB5147B9DABA7266714907B00D8651A3A76D714E32EE20A74D562DCE256B4190B20CD0F62998A29F1FEB8E3C23EBE12";
+
+    public String generateToken(UserDetails userDetails, long expiryMinutes) {
         Map<String, String> claims = new HashMap<>();
         claims.put("iss", "http://localhost:8080");
         return Jwts.builder()
                 .claims(claims)
                 .subject(userDetails.getUsername())
                 .issuedAt(Date.from(Instant.now()))
-                .expiration(Date.from(Instant.now().plusMillis(VALIDITY)))
+                .expiration(Date.from(Instant.now().plusMillis(expiryMinutes * 60 * 1000)))
                 .signWith(generateKey())
                 .compact(); // compact adica il converteste in json
     }

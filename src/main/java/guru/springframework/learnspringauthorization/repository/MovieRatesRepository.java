@@ -13,4 +13,8 @@ public interface MovieRatesRepository extends JpaRepository<MovieRates, Long> {
 
     @Query("SELECT AVG(m.rating) FROM MovieRates m WHERE m.movieId = :movieId")
     Double findAverageRatingByMovieId(@Param("movieId") Long movieId);
+
+//    @Query("SELECT AVG(m.rating) FROM MovieRates m WHERE m.userReviewer.id = :userId")
+    @Query(value = "SELECT AVG(rating) FROM movie_rates WHERE user_reviewer = :userId", nativeQuery = true)
+    Double findAverageRatingByUserId(@Param("userId") Long userId);
 }

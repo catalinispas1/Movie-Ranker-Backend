@@ -14,9 +14,11 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.Map;
 
 
@@ -34,12 +36,12 @@ public class AuthenticationController {
     private PasswordEncoder passwordEncoder;
 
     @PostMapping("/authenticate")
-    public String authenticateAndGetToken(@RequestBody LoginForm loginForm) {
+    public Map<String, String> authenticateAndGetToken(@RequestBody LoginForm loginForm) {
         Authentication authentication = authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(
                 loginForm.username(), loginForm.password()
         ));
         if (authentication.isAuthenticated()) {
-            return jwtService.generateToken(myUserDetailService.loadUserByUsername(loginForm.username()));
+            return generateTokens(loginForm.username());
         } else {
             throw new BadCredentialsException("Bad credentials");
         }
@@ -67,15 +69,22 @@ public class AuthenticationController {
             user.setPassword(passwordEncoder.encode(user.getPassword()));
             myUserRepository.save(user);
 
-            String token = jwtService.generateToken(myUserDetailService.loadUserByUsername(user.getUsername()));
-
-            return ResponseEntity.ok(Map.of("token", token));
+            return ResponseEntity.ok(generateTokens(user.getUsername()));
 
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("message", "An unexpected error occurred", "error", e.getMessage()));
         }
     }
 
+    private Map<String, String> generateTokens(String username) {
+        UserDetails user = myUserDetailService.loadUserByUsername(username);
+        String accessToken = jwtService.generateToken(user, 15); // JWT valabil 30 min
+        String refreshToken = jwtService.generateToken(user, 7 * 24 * 60); // Refresh  token va fi valabil 7 zile
+        Map<String, String> tokens = new HashMap<>();
+        tokens.put("accessToken", accessToken);
+        tokens.put("refreshToken", refreshToken);
+        return tokens;
+    }
 
     @GetMapping("user/details")
     public UserDetailsResponse getUserDetails() {
@@ -84,5 +93,29 @@ public class AuthenticationController {
         MyUser user = myUserRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("User not found"));
         return new UserDetailsResponse(user.getId(), user.getUsername());
+    }
+
+    @PostMapping("/refresh-token")
+    public Map<String, String> refreshToken(@RequestHeader("Authorization") String authHeader) {
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            throw new RuntimeException("Refresh token is missing");
+        }
+
+        String refreshToken = authHeader.substring(7);
+
+        if (!jwtService.isTokenValid(refreshToken)) {
+            throw new RuntimeException("Refresh token is invalid or expired");
+        }
+
+        // Extragem user-ul din token
+        String username = jwtService.extractUsername(refreshToken);
+        UserDetails userDetails = myUserDetailService.loadUserByUsername(username);
+
+        // Generam un nou token de acces valabil 30 min
+        String newAccessToken = jwtService.generateToken(userDetails, 15);
+
+        Map<String, String> tokens = new HashMap<>();
+        tokens.put("accessToken", newAccessToken);
+        return tokens;
     }
 }

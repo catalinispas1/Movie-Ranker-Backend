@@ -7,7 +7,9 @@ import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 @Entity
@@ -18,11 +20,15 @@ public class MyUser {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     private Long id;
+
     @Size(min = 2)
     private String username;
+
     @Size(min = 4)
     private String password;
+
     private String role; // daca sunt 2 punem asa: ADMIN,USER
+
     @ManyToMany
     @JoinTable(
             name = "user_favorite_movies",
@@ -31,6 +37,21 @@ public class MyUser {
     )
     private Set<FavoriteMovies> favoriteMovies = new HashSet<>();
 
+    @ManyToMany
+    @JoinTable(
+            name = "user_favorite_genres",
+            joinColumns = @JoinColumn(name = "user_id"),
+            inverseJoinColumns = @JoinColumn(name = "genre_id")
+    )
+    private List<MovieGenres> favoriteGenres = new ArrayList<>();
+
+    public List<MovieGenres> getFavoriteGenres() {
+        return favoriteGenres;
+    }
+
+    public void setFavoriteGenres(List<MovieGenres> favoriteGenres) {
+        this.favoriteGenres = favoriteGenres;
+    }
 
     public Set<FavoriteMovies> getFavoriteMovies() {
         return favoriteMovies;

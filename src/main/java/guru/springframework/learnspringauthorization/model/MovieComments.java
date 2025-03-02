@@ -1,5 +1,6 @@
 package guru.springframework.learnspringauthorization.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import org.hibernate.annotations.CreationTimestamp;
 
@@ -14,13 +15,19 @@ public class MovieComments {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     private Long id;
+
     @ManyToOne
     @JoinColumn(name = "user_commentator", referencedColumnName = "id")
+    @JsonIgnore
     private MyUser userCommentator;
+
     private Long commentedMovieId;
+
     @Column(nullable = false)
     private String comment;
+
     private String commentatorName;
+
     @CreationTimestamp
     private Timestamp timePosted;
 

@@ -24,7 +24,7 @@ public class FavoriteMovies {
     private String backdropPath;
 
     @ManyToMany(mappedBy = "favoriteMovies")
-    @JsonIgnoreProperties("favoriteMovies")
+    @JsonIgnore
     private Set<MyUser> users = new HashSet<>();
 
     public Set<MyUser> getUsers() {

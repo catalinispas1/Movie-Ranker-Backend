@@ -1,12 +1,12 @@
 package guru.springframework.learnspringauthorization.resourse.service;
 
 import guru.springframework.learnspringauthorization.model.*;
-import guru.springframework.learnspringauthorization.repository.FavoriteMoviesRepository;
-import guru.springframework.learnspringauthorization.repository.MovieCommentsRepository;
-import guru.springframework.learnspringauthorization.repository.MovieRatesRepository;
-import guru.springframework.learnspringauthorization.repository.MyUserRepository;
+import guru.springframework.learnspringauthorization.repository.*;
 import guru.springframework.learnspringauthorization.resourse.movieModel.CurrentMovie;
+import guru.springframework.learnspringauthorization.resourse.movieModel.FavoriteGenreCount;
+import guru.springframework.learnspringauthorization.resourse.movieModel.Genre;
 import guru.springframework.learnspringauthorization.resourse.movieModel.MovieResponse;
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.core.env.Environment;
@@ -20,6 +20,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 
@@ -36,6 +38,8 @@ public class MovieClientImpl implements MovieClient{
     private MovieRatesRepository movieRatesRepository;
     @Autowired
     private MovieCommentsRepository movieCommentsRepository;
+    @Autowired
+    private MovieGenresRepository movieGenresRepository;
     private final String url = "https://api.themoviedb.org/3";
     private final String apiKey;
 
@@ -81,8 +85,6 @@ public class MovieClientImpl implements MovieClient{
                 CurrentMovie.class
         );
 
-        System.out.println("GETTING CURRENT MOVIE");
-
         return response.getBody();
     }
 
@@ -101,7 +103,6 @@ public class MovieClientImpl implements MovieClient{
                 entity,
                 MovieResponse.class
         );
-        System.out.println(response.getBody());
 
         return response.getBody();
     }
@@ -109,9 +110,7 @@ public class MovieClientImpl implements MovieClient{
     @Override
     public MovieResponse getFilterMovies(int page, String query) {
         String requestUrl = url + "/discover/movie" + "?page=" + page + query;
-        System.out.println(query);
 
-        System.out.println("ASTA ESTE REQ URL: " + requestUrl);
         HttpHeaders headers = new HttpHeaders();
         headers.set("Authorization", "Bearer " + apiKey);
 
@@ -128,8 +127,9 @@ public class MovieClientImpl implements MovieClient{
         return response.getBody();
     }
 
+    @Transactional
     @Override
-    public void addFavoriteMovie(MyUser user, Long movieId, String posterPath, String title) {
+    public void addFavoriteMovie(MyUser user, Long movieId, String posterPath, String title, List<Genre> genres) {
         Optional<FavoriteMovies> existingMovie = favoriteMoviesRepository.findByMovieId(movieId);
         FavoriteMovies favoriteMovies;
 
@@ -143,13 +143,25 @@ public class MovieClientImpl implements MovieClient{
             favoriteMoviesRepository.save(favoriteMovies);
         }
 
+        for (Genre genre: genres) {
+            Optional<MovieGenres> movieGenres = movieGenresRepository.findByGenreId(genre.getId());
+
+            // they are all present in the DB, this is just for safety measures
+            movieGenres.ifPresent(value -> user.getFavoriteGenres().add(value));
+        }
+
         user.getFavoriteMovies().add(favoriteMovies);
         favoriteMovies.getUsers().add(user);
         userRepository.save(user);
     }
+
+    @Transactional
     @Override
-    public void removeFavoriteMovie(MyUser user, Long movieId) {
+    public void removeFavoriteMovie(MyUser user, Long movieId, List<Genre> genres) {
         user.getFavoriteMovies().removeIf(movie -> movie.getMovieId().equals(movieId));
+        for (Genre genre: genres) {
+            movieGenresRepository.deleteFavoriteGenres(user.getId(), genre.getId());
+        }
         userRepository.save(user);
     }
 
@@ -211,5 +223,36 @@ public class MovieClientImpl implements MovieClient{
     @Override
     public MyUser getCurrentUser(String username) {
         return userRepository.findByUsername(username).orElseThrow(() -> new RuntimeException("User not found"));
+    }
+
+    @Override
+    public int getUserFavoriteMoviesCount(MyUser user) {
+        return user.getFavoriteMovies().size();
+    }
+
+    @Override
+    public Double getAverageRatingPattern(MyUser user) {
+        return movieRatesRepository.findAverageRatingByUserId(user.getId());
+    }
+
+    @Override
+    public int getTotalCommentsPosted(MyUser user) {
+        return movieCommentsRepository.getTotalCommentsPostedByUser(user.getId());
+    }
+
+    @Override
+    public List<FavoriteGenreCount> getFavoriteGenreCount(MyUser user) {
+        List<FavoriteGenreCount> favoriteGenreCountList = new ArrayList<>();
+        List<Object[]> rawResults = movieGenresRepository.getFavoriteGenreCount(user.getId());
+
+        for (Object[] row: rawResults) {
+            int genreCount = ((Number) row[0]).intValue();
+            int genreId = ((Number) row[1]).intValue();
+            String genreName = (String) row[2];
+
+            favoriteGenreCountList.add(new FavoriteGenreCount(genreId, genreName, genreCount));
+        }
+
+        return favoriteGenreCountList;
     }
 }

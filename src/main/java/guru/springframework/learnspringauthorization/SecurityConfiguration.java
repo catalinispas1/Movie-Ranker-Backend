@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import guru.springframework.learnspringauthorization.model.MyUserDetailService;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.Environment;
@@ -75,7 +76,7 @@ public class SecurityConfiguration {
     public AuthenticationProvider authenticationProvider() {
         // created for loading users from the database or any data acces layer, used for authentification
         DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
-        provider.setUserDetailsService(userDetailService); // Încărcarea utilizatorului pe baza username-ului:
+        provider.setUserDetailsService(userDetailService); // Incarcarea utilizatorului pe baza username-ului:
         provider.setPasswordEncoder(passwordEncoder()); // Compararea parolelor:
         return provider;
     }
@@ -90,16 +91,13 @@ public class SecurityConfiguration {
         return new BCryptPasswordEncoder();
     }
 
-
-    private final String serverIp;
-    @Autowired
-    public SecurityConfiguration(Environment environment) {serverIp = environment.getProperty("server.ip");};
+    @Value("${frontend.url}")
+    private String frontendUrl;
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.addAllowedOrigin("http://" + serverIp + ":4200");
-        configuration.addAllowedOrigin("http://localhost:4200"); // Permite originea aplicatiei Angular
+        configuration.addAllowedOrigin(frontendUrl); // Permite originea aplicatiei Angular
         configuration.addAllowedMethod("*"); // Permite toate metodele HTTP (GET, POST, etc.)
         configuration.addAllowedHeader("*"); // Permite toate header-ele
         configuration.setAllowCredentials(true); // Permite cookie-uri sau autentificare bazata pe sesiune
